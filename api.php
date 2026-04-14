@@ -104,6 +104,41 @@ switch ($action) {
         jsonResponse($newTicket, 201);
         break;
 
+    case 'update_ticket':
+        if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
+        if (!hasRole(['admin', 'technician'])) jsonResponse(['error' => 'Forbidden'], 403);
+
+        $ticketId = $_POST['ticket_id'] ?? 0;
+        $status = $_POST['status'] ?? null;
+        $assigneeId = $_POST['assigned_to'] ?? null;
+        $priority = $_POST['priority'] ?? null;
+
+        $tickets = loadJson('tickets');
+        $found = false;
+        foreach ($tickets as &$t) {
+            if ($t['id'] == $ticketId) {
+                if ($status !== null && in_array($status, ['open', 'in_progress', 'resolved', 'closed'])) {
+                    $t['status'] = $status;
+                }
+                if ($assigneeId !== null) {
+                    $t['assigned_to'] = $assigneeId === '' ? null : (int)$assigneeId;
+                }
+                if ($priority !== null && in_array($priority, ['low', 'medium', 'high', 'urgent'])) {
+                    $t['priority'] = $priority;
+                }
+                $found = true;
+                break;
+            }
+        }
+
+        if ($found) {
+            saveJson('tickets', $tickets);
+            jsonResponse(['success' => true]);
+        } else {
+            jsonResponse(['error' => 'Ticket not found'], 404);
+        }
+        break;
+
     case 'add_comment':
         if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
         
@@ -146,65 +181,6 @@ switch ($action) {
         jsonResponse($newComment, 201);
         break;
 
-    case 'update_status':
-        if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
-        if (!hasRole(['admin', 'technician'])) jsonResponse(['error' => 'Forbidden'], 403);
-
-        $ticketId = $_POST['ticket_id'] ?? 0;
-        $status = $_POST['status'] ?? '';
-
-        if (!in_array($status, ['open', 'in_progress', 'resolved', 'closed'])) {
-            jsonResponse(['error' => 'Invalid status'], 400);
-        }
-
-        $tickets = loadJson('tickets');
-        $found = false;
-        foreach ($tickets as &$t) {
-            if ($t['id'] == $ticketId) {
-                $t['status'] = $status;
-                $found = true;
-                break;
-            }
-        }
-
-        if ($found) {
-            saveJson('tickets', $tickets);
-            jsonResponse(['success' => true]);
-        } else {
-            jsonResponse(['error' => 'Ticket not found'], 404);
-        }
-        break;
-
-    case 'assign_ticket':
-        if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
-        if (!hasRole(['admin', 'technician'])) jsonResponse(['error' => 'Forbidden'], 403);
-
-        $ticketId = $_POST['ticket_id'] ?? 0;
-        $assigneeId = $_POST['assigned_to'] ?? null;
-
-        // Technicians can only assign to themselves if not admin
-        if (!hasRole('admin') && $assigneeId != $_SESSION['user']['id']) {
-             jsonResponse(['error' => 'Technicians can only assign to themselves'], 403);
-        }
-
-        $tickets = loadJson('tickets');
-        $found = false;
-        foreach ($tickets as &$t) {
-            if ($t['id'] == $ticketId) {
-                $t['assigned_to'] = $assigneeId ? (int)$assigneeId : null;
-                $found = true;
-                break;
-            }
-        }
-
-        if ($found) {
-            saveJson('tickets', $tickets);
-            jsonResponse(['success' => true]);
-        } else {
-            jsonResponse(['error' => 'Ticket not found'], 404);
-        }
-        break;
-
     case 'delete_ticket':
         if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
         if (!hasRole('admin')) jsonResponse(['error' => 'Forbidden'], 403);
@@ -225,13 +201,6 @@ switch ($action) {
                 return $c['ticket_id'] != $ticketId;
             });
             saveJson('comments', array_values($comments));
-            
-            // Delete uploads directory if exists
-            $uploadDir = __DIR__ . "/uploads/{$ticketId}/";
-            if (is_dir($uploadDir)) {
-                // Recursive delete would be better but let's just leave it for now or do a simple version
-                // For safety in this environment I'll just leave the files, but in a real app I'd clean up.
-            }
             
             jsonResponse(['success' => true]);
         } else {

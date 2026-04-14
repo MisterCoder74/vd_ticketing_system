@@ -197,6 +197,16 @@ $user = $_SESSION['user'] ?? null;
                                         <span class="label">Priority:</span>
                                         <span id="det-priority-badge" class="badge"></span>
                                     </div>
+                                    <?php if (hasRole(['admin', 'technician'])): ?>
+                                    <div class="info-row" style="padding-top: 0;">
+                                        <select id="det-change-priority" class="form-group" style="margin-bottom: 0;">
+                                            <option value="low">Low</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="high">High</option>
+                                            <option value="urgent">Urgent</option>
+                                        </select>
+                                    </div>
+                                    <?php endif; ?>
                                     <div class="info-row">
                                         <span class="label">Created By:</span>
                                         <span id="det-creator"></span>
