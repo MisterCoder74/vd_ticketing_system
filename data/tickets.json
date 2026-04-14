@@ -13,7 +13,7 @@
     "id": 2,
     "title": "Printer not working",
     "description": "The printer in the hall is showing an error code E-05.",
-    "status": "in-progress",
+    "status": "in_progress",
     "priority": "medium",
     "created_by": 3,
     "assigned_to": 2,
