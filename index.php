@@ -79,6 +79,11 @@ $user = $_SESSION['user'] ?? null;
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%">Login</button>
                     </form>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="documentation.html" target="_blank" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem; font-weight: 600;">
+                            Hai bisogno di aiuto? Consulta il Manuale Utente
+                        </a>
+                    </div>
                 </section>
 
             <?php else: ?>
