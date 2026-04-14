@@ -206,6 +206,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusSelect = document.getElementById('det-change-status');
         if (statusSelect) statusSelect.value = ticket.status;
 
+        const prioritySelect = document.getElementById('det-change-priority');
+        if (prioritySelect) prioritySelect.value = ticket.priority;
+
         renderComments(ticket.comments);
         renderFiles(ticket.files);
     }
@@ -276,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusSelect) {
             statusSelect.addEventListener('change', async () => {
                 const newStatus = statusSelect.value;
-                const res = await apiCall('update_status', 'POST', {
+                const res = await apiCall('update_ticket', 'POST', {
                     ticket_id: state.currentTicket.id,
                     status: newStatus
                 });
@@ -290,12 +293,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Priority Change
+        const prioritySelect = document.getElementById('det-change-priority');
+        if (prioritySelect) {
+            prioritySelect.addEventListener('change', async () => {
+                const newPriority = prioritySelect.value;
+                const res = await apiCall('update_ticket', 'POST', {
+                    ticket_id: state.currentTicket.id,
+                    priority: newPriority
+                });
+                if (res.success) {
+                    const badge = document.getElementById('det-priority-badge');
+                    badge.textContent = newPriority;
+                    badge.className = `badge badge-${newPriority}`;
+                } else {
+                    alert('Error: ' + (res.error || 'Failed to update priority'));
+                }
+            });
+        }
+
         // Assignment
         const assignBtn = document.getElementById('det-btn-assign');
         if (assignBtn) {
             assignBtn.addEventListener('click', async () => {
                 const userId = document.getElementById('det-assign-user').value;
-                const res = await apiCall('assign_ticket', 'POST', {
+                const res = await apiCall('update_ticket', 'POST', {
                     ticket_id: state.currentTicket.id,
                     assigned_to: userId
                 });
