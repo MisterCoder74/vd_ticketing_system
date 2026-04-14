@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "$2y$10$DBmyIG/yN.26AtlZpdYFBu.DBmx6tbGOmHlOncqhwriuUzohoK8cq",
+    "role": "admin",
+    "name": "Admin User"
+  },
+  {
+    "id": 2,
+    "username": "tech",
+    "password": "$2y$10$.6l/4qEa/uaAuF5vS6qglesOG36rxl2z0pG8/z/yQxA2D2iLm4kNe",
+    "role": "technician",
+    "name": "Technical Support"
+  },
+  {
+    "id": 3,
+    "username": "user",
+    "password": "$2y$10$KWKF7COGO7XCvTxm8aQvn.Sb//eTphs9MU4R3aQSpPteyyNDU4jNW",
+    "role": "user",
+    "name": "Standard User"
+  }
+]
