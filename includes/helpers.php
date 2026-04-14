@@ -50,3 +50,38 @@ function jsonResponse($data, $status = 200) {
     echo json_encode($data);
     exit;
 }
+
+/**
+ * Get an asset URL with versioning based on file modification time.
+ */
+function asset($path) {
+    $fullPath = __DIR__ . '/../' . $path;
+    if (file_exists($fullPath)) {
+        return $path . '?v=' . filemtime($fullPath);
+    }
+    return $path;
+}
+
+/**
+ * Get the next ID for a JSON data file.
+ */
+function getNextId($filename) {
+    $data = loadJson($filename);
+    if (empty($data)) {
+        return 1;
+    }
+    $ids = array_column($data, 'id');
+    return max($ids) + 1;
+}
+
+/**
+ * Get a map of user IDs to names.
+ */
+function getUsersMap() {
+    $users = loadJson('users');
+    $map = [];
+    foreach ($users as $user) {
+        $map[$user['id']] = $user['name'];
+    }
+    return $map;
+}
