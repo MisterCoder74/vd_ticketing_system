@@ -1,0 +1,10 @@
+# PHP
+.php_cs.cache
+/vendor/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
