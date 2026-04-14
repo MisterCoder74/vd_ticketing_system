@@ -1,13 +1,7 @@
-# PHP
-.php_cs.cache
-/vendor/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Uploads
 /uploads/
+/data/*.json
+!/data/users.json
+!/data/tickets.json
+!/data/comments.json
+.DS_Store
+*.log
