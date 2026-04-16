@@ -85,3 +85,89 @@ function getUsersMap() {
     }
     return $map;
 }
+
+/**
+ * Log an activity to data/logs.json.
+ *
+ * @param int $userId
+ * @param string $action
+ * @param string $details
+ */
+function logActivity($userId, $action, $details) {
+    $logs = loadJson('logs');
+    $usersMap = getUsersMap();
+    $userName = $usersMap[$userId] ?? 'Unknown';
+    
+    $logs[] = [
+        'id' => empty($logs) ? 1 : max(array_column($logs, 'id')) + 1,
+        'user_id' => $userId,
+        'user_name' => $userName,
+        'action' => $action,
+        'details' => $details,
+        'timestamp' => date('Y-m-d H:i:s')
+    ];
+    saveJson('logs', $logs);
+}
+
+/**
+ * Send email notifications for ticket events.
+ *
+ * @param int $ticketId
+ * @param string $type ('new_comment' or 'status_change')
+ * @param array $data
+ */
+function sendNotification($ticketId, $type, $data) {
+    $tickets = loadJson('tickets');
+    $ticket = null;
+    foreach ($tickets as $t) {
+        if ($t['id'] == $ticketId) {
+            $ticket = $t;
+            break;
+        }
+    }
+    if (!$ticket) return;
+
+    $users = loadJson('users');
+    $creator = null;
+    $technician = null;
+    $admins = [];
+
+    foreach ($users as $user) {
+        if ($user['id'] == $ticket['created_by']) $creator = $user;
+        if (isset($ticket['assigned_to']) && $user['id'] == $ticket['assigned_to']) $technician = $user;
+        if ($user['role'] == 'admin') $admins[] = $user;
+    }
+
+    $to = [];
+    $subject = "";
+    $message = "";
+
+    if ($type === 'new_comment') {
+        $subject = "Nuovo commento sul ticket #{$ticketId}: {$ticket['title']}";
+        $message = "E' stato aggiunto un nuovo commento al ticket #{$ticketId}.\n\n";
+        $message .= "Autore: " . ($data['user_name'] ?? 'Qualcuno') . "\n";
+        $message .= "Commento: " . ($data['comment'] ?? '') . "\n";
+        
+        // Notify creator, assigned tech and admins
+        if ($creator) $to[] = $creator['email'];
+        if ($technician) $to[] = $technician['email'];
+        foreach ($admins as $admin) $to[] = $admin['email'];
+    } elseif ($type === 'status_change') {
+        $subject = "Cambio stato ticket #{$ticketId}: {$ticket['title']}";
+        $message = "Lo stato del ticket #{$ticketId} e' cambiato in: {$data['new_status']}.\n";
+        
+        // Notify creator and admins
+        if ($creator) $to[] = $creator['email'];
+        foreach ($admins as $admin) $to[] = $admin['email'];
+    }
+
+    $to = array_unique(array_filter($to));
+    if (empty($to)) return;
+
+    $headers = "From: no-reply@ticketing-system.com\r\n";
+    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+    foreach ($to as $email) {
+        mail($email, $subject, $message, $headers);
+    }
+}

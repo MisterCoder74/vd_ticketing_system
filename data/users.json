@@ -4,20 +4,26 @@
     "username": "admin",
     "password": "$2y$10$DBmyIG/yN.26AtlZpdYFBu.DBmx6tbGOmHlOncqhwriuUzohoK8cq",
     "role": "admin",
-    "name": "Admin User"
+    "name": "Admin User",
+    "email": "admin@example.com",
+    "department": "IT Management"
   },
   {
     "id": 2,
     "username": "tech",
     "password": "$2y$10$.6l/4qEa/uaAuF5vS6qglesOG36rxl2z0pG8/z/yQxA2D2iLm4kNe",
     "role": "technician",
-    "name": "Technical Support"
+    "name": "Technical Support",
+    "email": "tech@example.com",
+    "department": "Support"
   },
   {
     "id": 3,
     "username": "user",
     "password": "$2y$10$KWKF7COGO7XCvTxm8aQvn.Sb//eTphs9MU4R3aQSpPteyyNDU4jNW",
     "role": "user",
-    "name": "Standard User"
+    "name": "Standard User",
+    "email": "user@example.com",
+    "department": "Marketing"
   }
 ]
