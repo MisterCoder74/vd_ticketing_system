@@ -11,7 +11,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($action) {
     case 'get_tickets':
         $tickets = loadJson('tickets');
-        $usersMap = getUsersMap();
+        $usersMap = getUsersMapWithRoles();
         
         // Filter tickets based on role
         if (hasRole('user')) {
@@ -46,7 +46,7 @@ switch ($action) {
                 jsonResponse(['error' => 'Forbidden'], 403);
             }
             
-            $usersMap = getUsersMap();
+            $usersMap = getUsersMapWithRoles();
             $ticket['created_by_name'] = $usersMap[$ticket['created_by']] ?? 'Unknown';
             $ticket['assigned_to_name'] = $usersMap[$ticket['assigned_to'] ?? 0] ?? 'Unassigned';
 
@@ -124,7 +124,10 @@ switch ($action) {
                     if ($t['status'] !== $status) {
                         $changes[] = "Stato cambiato da {$t['status']} a {$status}";
                         $t['status'] = $status;
-                        sendNotification($ticketId, 'status_change', ['new_status' => $status]);
+                        sendNotification($ticketId, 'status_change', [
+                            'new_status' => $status,
+                            'user_name' => $_SESSION['user']['name']
+                        ]);
                     }
                 }
                 if ($assigneeId !== null) {

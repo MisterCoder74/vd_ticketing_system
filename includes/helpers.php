@@ -87,6 +87,30 @@ function getUsersMap() {
 }
 
 /**
+ * Get a map of user IDs to "Name (Role)".
+ */
+function getUsersMapWithRoles() {
+    $users = loadJson('users');
+    $map = [];
+    foreach ($users as $user) {
+        $map[$user['id']] = $user['name'] . " (" . ($user['role'] ?? 'user') . ")";
+    }
+    return $map;
+}
+
+/**
+ * Get the base URL of the application.
+ */
+function getBaseUrl() {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || ($_SERVER['SERVER_PORT'] ?? 80) == 443) ? "https://" : "http://";
+    $domainName = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    $path = str_replace(basename($scriptName), '', $scriptName);
+    $path = rtrim($path, '/');
+    return $protocol . $domainName . $path . '/';
+}
+
+/**
  * Log an activity to data/logs.json.
  *
  * @param int $userId
@@ -140,13 +164,17 @@ function sendNotification($ticketId, $type, $data) {
 
     $to = [];
     $subject = "";
-    $message = "";
-
+    
+    $baseUrl = getBaseUrl();
+    $timestamp = date('Y-m-d H:i:s');
+    $author = $data['user_name'] ?? 'System';
+    
     if ($type === 'new_comment') {
         $subject = "Nuovo commento sul ticket #{$ticketId}: {$ticket['title']}";
-        $message = "E' stato aggiunto un nuovo commento al ticket #{$ticketId}.\n\n";
-        $message .= "Autore: " . ($data['user_name'] ?? 'Qualcuno') . "\n";
-        $message .= "Commento: " . ($data['comment'] ?? '') . "\n";
+        $contentTitle = "Nuovo Commento";
+        $contentText = "È stato aggiunto un nuovo commento al ticket #{$ticketId}.";
+        $detailLabel = "Testo Commento";
+        $detailValue = $data['comment'] ?? '';
         
         // Notify creator, assigned tech and admins
         if ($creator) $to[] = $creator['email'];
@@ -154,7 +182,10 @@ function sendNotification($ticketId, $type, $data) {
         foreach ($admins as $admin) $to[] = $admin['email'];
     } elseif ($type === 'status_change') {
         $subject = "Cambio stato ticket #{$ticketId}: {$ticket['title']}";
-        $message = "Lo stato del ticket #{$ticketId} e' cambiato in: {$data['new_status']}.\n";
+        $contentTitle = "Cambio Stato";
+        $contentText = "Lo stato del ticket #{$ticketId} è cambiato.";
+        $detailLabel = "Nuovo Stato";
+        $detailValue = $data['new_status'] ?? 'Unknown';
         
         // Notify creator and admins
         if ($creator) $to[] = $creator['email'];
@@ -164,10 +195,69 @@ function sendNotification($ticketId, $type, $data) {
     $to = array_unique(array_filter($to));
     if (empty($to)) return;
 
+    $hasAttachments = !empty($ticket['attachments']);
+    $attachmentsLabel = $hasAttachments ? "Yes" : "No";
+    $attachmentPreviews = "";
+    if ($hasAttachments) {
+        foreach ($ticket['attachments'] as $att) {
+            $ext = strtolower(pathinfo($att['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $absUrl = $baseUrl . $att['url'];
+                $attachmentPreviews .= "<div style='margin-bottom: 10px;'><img src='{$absUrl}' style='max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px;' alt='{$att['name']}'></div>";
+            }
+        }
+    }
+
+    $body = "
+    <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;'>
+        <div style='background-color: #007bff; color: #ffffff; padding: 20px; text-align: center;'>
+            <h1 style='margin: 0; font-size: 24px;'>{$contentTitle}</h1>
+        </div>
+        <div style='padding: 20px;'>
+            <p style='font-size: 16px; margin-top: 0;'>{$contentText}</p>
+            <table style='width: 100%; border-collapse: collapse;'>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; width: 120px;'>ID Ticket:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee;'>#{$ticketId}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Titolo:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$ticket['title']}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Data/Ora:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$timestamp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Autore:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$author}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>{$detailLabel}:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; white-space: pre-wrap;'>{$detailValue}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;'>Attachments:</td>
+                    <td style='padding: 10px; border-bottom: 1px solid #eee;'>{$attachmentsLabel}</td>
+                </tr>
+            </table>
+            " . ($attachmentPreviews ? "
+            <div style='margin-top: 20px;'>
+                <h3 style='font-size: 18px; margin-bottom: 10px;'>Anteprime Allegati:</h3>
+                {$attachmentPreviews}
+            </div>" : "") . "
+        </div>
+        <div style='background-color: #f8f9fa; color: #6c757d; padding: 15px; text-align: center; font-size: 12px;'>
+            Questa è una notifica automatica dal Sistema Ticketing. Si prega di non rispondere a questa email.
+        </div>
+    </div>
+    ";
+
     $headers = "From: no-reply@ticketing-system.com\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
 
     foreach ($to as $email) {
-        mail($email, $subject, $message, $headers);
+        mail($email, $subject, "<html><body>" . $body . "</body></html>", $headers);
     }
 }
