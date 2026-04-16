@@ -101,6 +101,8 @@ switch ($action) {
         $tickets[] = $newTicket;
         saveJson('tickets', $tickets);
         
+        logActivity($_SESSION['user']['id'], 'create_ticket', "Creato ticket #{$newTicket['id']}: {$newTicket['title']}");
+        
         jsonResponse($newTicket, 201);
         break;
 
@@ -115,16 +117,31 @@ switch ($action) {
 
         $tickets = loadJson('tickets');
         $found = false;
+        $changes = [];
         foreach ($tickets as &$t) {
             if ($t['id'] == $ticketId) {
                 if ($status !== null && in_array($status, ['open', 'in_progress', 'resolved', 'closed'])) {
-                    $t['status'] = $status;
+                    if ($t['status'] !== $status) {
+                        $changes[] = "Stato cambiato da {$t['status']} a {$status}";
+                        $t['status'] = $status;
+                        sendNotification($ticketId, 'status_change', ['new_status' => $status]);
+                    }
                 }
                 if ($assigneeId !== null) {
-                    $t['assigned_to'] = $assigneeId === '' ? null : (int)$assigneeId;
+                    $newAssigneeId = $assigneeId === '' ? null : (int)$assigneeId;
+                    if ($t['assigned_to'] !== $newAssigneeId) {
+                        $usersMap = getUsersMap();
+                        $oldName = $usersMap[$t['assigned_to'] ?? 0] ?? 'Unassigned';
+                        $newName = $usersMap[$newAssigneeId ?? 0] ?? 'Unassigned';
+                        $changes[] = "Assegnato cambiato da {$oldName} a {$newName}";
+                        $t['assigned_to'] = $newAssigneeId;
+                    }
                 }
                 if ($priority !== null && in_array($priority, ['low', 'medium', 'high', 'urgent'])) {
-                    $t['priority'] = $priority;
+                    if ($t['priority'] !== $priority) {
+                        $changes[] = "Priorità cambiata da {$t['priority']} a {$priority}";
+                        $t['priority'] = $priority;
+                    }
                 }
                 $found = true;
                 break;
@@ -133,6 +150,9 @@ switch ($action) {
 
         if ($found) {
             saveJson('tickets', $tickets);
+            if (!empty($changes)) {
+                logActivity($_SESSION['user']['id'], 'update_ticket', "Aggiornato ticket #{$ticketId}: " . implode(", ", $changes));
+            }
             jsonResponse(['success' => true]);
         } else {
             jsonResponse(['error' => 'Ticket not found'], 404);
@@ -177,6 +197,9 @@ switch ($action) {
         $comments[] = $newComment;
         saveJson('comments', $comments);
         
+        logActivity($_SESSION['user']['id'], 'add_comment', "Aggiunto commento al ticket #{$ticketId}");
+        sendNotification($ticketId, 'new_comment', ['user_name' => $_SESSION['user']['name'], 'comment' => $commentText]);
+        
         $newComment['user_name'] = $_SESSION['user']['name'];
         jsonResponse($newComment, 201);
         break;
@@ -201,6 +224,8 @@ switch ($action) {
                 return $c['ticket_id'] != $ticketId;
             });
             saveJson('comments', array_values($comments));
+            
+            logActivity($_SESSION['user']['id'], 'delete_ticket', "Eliminato ticket #{$ticketId}");
             
             jsonResponse(['success' => true]);
         } else {
@@ -259,6 +284,8 @@ switch ($action) {
             }
             saveJson('tickets', $allTickets);
 
+            logActivity($_SESSION['user']['id'], 'upload_file', "Caricato file per il ticket #{$ticketId}: {$fileName}");
+
             jsonResponse(['success' => true, 'file' => $attachment]);
         } else {
             jsonResponse(['error' => 'Failed to move uploaded file'], 500);
@@ -274,6 +301,71 @@ switch ($action) {
         jsonResponse(array_values(array_map(function($u) {
             return ['id' => $u['id'], 'name' => $u['name']];
         }, $technicians)));
+        break;
+
+    case 'get_logs':
+        if (!hasRole(['admin', 'technician'])) jsonResponse(['error' => 'Forbidden'], 403);
+        $logs = loadJson('logs');
+        // Return logs sorted by timestamp desc
+        usort($logs, function($a, $b) {
+            return strcmp($b['timestamp'], $a['timestamp']);
+        });
+        jsonResponse($logs);
+        break;
+
+    case 'get_stats':
+        if (!hasRole('admin')) jsonResponse(['error' => 'Forbidden'], 403);
+        $tickets = loadJson('tickets');
+        $stats = [
+            'status' => [
+                'open' => 0,
+                'in_progress' => 0,
+                'resolved' => 0,
+                'closed' => 0
+            ],
+            'priority' => [
+                'low' => 0,
+                'medium' => 0,
+                'high' => 0,
+                'urgent' => 0
+            ],
+            'total' => count($tickets)
+        ];
+        foreach ($tickets as $t) {
+            if (isset($stats['status'][$t['status']])) {
+                $stats['status'][$t['status']]++;
+            }
+            if (isset($stats['priority'][$t['priority']])) {
+                $stats['priority'][$t['priority']]++;
+            }
+        }
+        jsonResponse($stats);
+        break;
+
+    case 'export_csv':
+        if (!hasRole('admin')) jsonResponse(['error' => 'Forbidden'], 403);
+        $tickets = loadJson('tickets');
+        $usersMap = getUsersMap();
+        
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="tickets_' . date('Y-m-d') . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['ID', 'Titolo', 'Stato', 'Priorita', 'Creato da', 'Assegnato a', 'Data Creazione']);
+        
+        foreach ($tickets as $t) {
+            fputcsv($output, [
+                $t['id'],
+                $t['title'],
+                $t['status'],
+                $t['priority'],
+                $usersMap[$t['created_by']] ?? 'Unknown',
+                $usersMap[$t['assigned_to'] ?? 0] ?? 'Unassigned',
+                $t['created_at']
+            ]);
+        }
+        fclose($output);
+        exit;
         break;
 
     default:

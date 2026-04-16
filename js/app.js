@@ -9,8 +9,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const sections = {
         dashboard: document.getElementById('ticket-dashboard'),
         create: document.getElementById('ticket-create'),
-        details: document.getElementById('ticket-details')
+        details: document.getElementById('ticket-details'),
+        logs: document.getElementById('activity-logs'),
+        stats: document.getElementById('admin-stats')
     };
+
+    // Navigation Links
+    const navLinks = {
+        dashboard: document.getElementById('nav-dashboard'),
+        logs: document.getElementById('nav-logs'),
+        stats: document.getElementById('nav-stats')
+    };
+
+    if (navLinks.dashboard) {
+        navLinks.dashboard.addEventListener('click', (e) => {
+            e.preventDefault();
+            showDashboard();
+            window.history.pushState({}, '', 'index.php');
+        });
+    }
+
+    if (navLinks.logs) {
+        navLinks.logs.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLogs();
+        });
+    }
+
+    if (navLinks.stats) {
+        navLinks.stats.addEventListener('click', (e) => {
+            e.preventDefault();
+            showStats();
+        });
+    }
+
+    // Filter Status
+    const filterStatus = document.getElementById('filter-status');
+    if (filterStatus) {
+        filterStatus.addEventListener('change', () => {
+            showDashboard();
+        });
+    }
+
+    // CSV Export
+    const btnExportCsv = document.getElementById('btn-export-csv');
+    if (btnExportCsv) {
+        btnExportCsv.addEventListener('click', () => {
+            window.location.href = 'api.php?action=export_csv';
+        });
+    }
 
     const buttons = {
         openCreate: document.getElementById('btn-open-create'),
@@ -87,10 +134,16 @@ document.addEventListener('DOMContentLoaded', () => {
         tableBody.innerHTML = '<tr><td colspan="8">Loading tickets...</td></tr>';
 
         try {
-            const tickets = await apiCall('get_tickets');
+            let tickets = await apiCall('get_tickets');
             if (tickets.error) {
                 tableBody.innerHTML = `<tr><td colspan="8" class="error">${tickets.error}</td></tr>`;
                 return;
+            }
+
+            // Apply filter
+            const filterValue = document.getElementById('filter-status').value;
+            if (filterValue !== 'all') {
+                tickets = tickets.filter(t => t.status === filterValue);
             }
 
             if (tickets.length === 0) {
@@ -387,5 +440,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    async function showLogs() {
+        showSection('logs');
+        const tableBody = document.getElementById('logs-table-body');
+        if (!tableBody) return;
+        tableBody.innerHTML = '<tr><td colspan="4">Loading logs...</td></tr>';
+
+        try {
+            const logs = await apiCall('get_logs');
+            if (logs.error) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="error">${logs.error}</td></tr>`;
+                return;
+            }
+            tableBody.innerHTML = '';
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${log.timestamp}</td>
+                    <td>${escapeHtml(log.user_name)}</td>
+                    <td><code>${escapeHtml(log.action)}</code></td>
+                    <td>${escapeHtml(log.details)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error(err);
+            tableBody.innerHTML = '<tr><td colspan="4" class="error">Failed to load logs.</td></tr>';
+        }
+    }
+
+    async function showStats() {
+        showSection('stats');
+        try {
+            const stats = await apiCall('get_stats');
+            if (stats.error) {
+                alert(stats.error);
+                return;
+            }
+            
+            document.getElementById('stats-total').textContent = stats.total;
+            
+            const statusList = document.getElementById('stats-status-list');
+            statusList.innerHTML = '';
+            for (const [status, count] of Object.entries(stats.status)) {
+                const row = document.createElement('div');
+                row.className = 'info-row';
+                row.innerHTML = `<span class="label">${status}:</span> <span>${count}</span>`;
+                statusList.appendChild(row);
+            }
+
+            const priorityList = document.getElementById('stats-priority-list');
+            priorityList.innerHTML = '';
+            for (const [priority, count] of Object.entries(stats.priority)) {
+                const row = document.createElement('div');
+                row.className = 'info-row';
+                row.innerHTML = `<span class="label">${priority}:</span> <span>${count}</span>`;
+                priorityList.appendChild(row);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to load statistics.');
+        }
     }
 });

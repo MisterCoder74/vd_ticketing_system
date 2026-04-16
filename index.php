@@ -54,11 +54,18 @@ $user = $_SESSION['user'] ?? null;
                 <h1><a href="index.php">VD Ticketing System</a></h1>
                 <?php if (isLoggedIn()): ?>
                     <nav>
+                        <a href="index.php?action=dashboard" id="nav-dashboard">Dashboard</a>
+                        <?php if (hasRole(['admin', 'technician'])): ?>
+                            <a href="#" id="nav-logs">Logs</a>
+                        <?php endif; ?>
+                        <?php if (hasRole('admin')): ?>
+                            <a href="#" id="nav-stats">Stats</a>
+                        <?php endif; ?>
                         <span>Welcome, <strong><?php echo htmlspecialchars($user['name']); ?></strong> (<?php echo htmlspecialchars($user['role']); ?>)</span>
                         <a href="index.php?action=logout" class="btn-logout">Logout</a>
                     </nav>
                 <?php endif; ?>
-            </div>
+
         </header>
 
         <main>
@@ -94,7 +101,16 @@ $user = $_SESSION['user'] ?? null;
                     <section id="ticket-dashboard" class="dynamic-section">
                         <div class="section-header">
                             <h2>Dashboard</h2>
-                            <button id="btn-open-create" class="btn btn-primary">Create New Ticket</button>
+                            <div class="header-actions">
+                                <select id="filter-status" class="btn btn-secondary" style="background: white; color: black; border: 1px solid #ccc;">
+                                    <option value="all">All Statuses</option>
+                                    <option value="open">Open</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                    <option value="closed">Closed</option>
+                                </select>
+                                <button id="btn-open-create" class="btn btn-primary">Create New Ticket</button>
+                            </div>
                         </div>
 
                         <div id="ticket-list-container">
@@ -246,6 +262,57 @@ $user = $_SESSION['user'] ?? null;
                                         </div>
                                         <button type="submit" class="btn btn-sm btn-primary" style="width: 100%">Upload File</button>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Activity Logs Section -->
+                    <section id="activity-logs" class="dynamic-section hidden">
+                        <div class="section-header">
+                            <h2>Activity Logs</h2>
+                            <button class="btn btn-secondary btn-back-to-list">Back to List</button>
+                        </div>
+                        <div id="logs-container" class="card">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-table-body">
+                                    <tr><td colspan="4">Loading logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Admin Stats Section -->
+                    <section id="admin-stats" class="dynamic-section hidden">
+                        <div class="section-header">
+                            <h2>Statistics</h2>
+                            <div class="header-actions">
+                                <button id="btn-export-csv" class="btn btn-success">Export CSV</button>
+                                <button class="btn btn-secondary btn-back-to-list">Back to List</button>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="card stats-card">
+                                <h3>By Status</h3>
+                                <div id="stats-status-list"></div>
+                            </div>
+                            <div class="card stats-card">
+                                <h3>By Priority</h3>
+                                <div id="stats-priority-list"></div>
+                            </div>
+                            <div class="card stats-card">
+                                <h3>Overall</h3>
+                                <div class="info-row">
+                                    <span class="label">Total Tickets:</span>
+                                    <span id="stats-total" style="font-weight: bold; font-size: 1.5rem;">0</span>
                                 </div>
                             </div>
                         </div>
