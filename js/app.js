@@ -2,7 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // State management
     const state = {
         currentTicket: null,
-        technicians: []
+        technicians: [],
+        charts: {
+            status: null,
+            priority: null
+        }
     };
 
     // UI Elements
@@ -11,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         create: document.getElementById('ticket-create'),
         details: document.getElementById('ticket-details'),
         logs: document.getElementById('activity-logs'),
+        users: document.getElementById('admin-users'),
         stats: document.getElementById('admin-stats')
     };
 
@@ -18,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = {
         dashboard: document.getElementById('nav-dashboard'),
         logs: document.getElementById('nav-logs'),
+        users: document.getElementById('nav-users'),
         stats: document.getElementById('nav-stats')
     };
 
@@ -33,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.logs.addEventListener('click', (e) => {
             e.preventDefault();
             showLogs();
+        });
+    }
+
+    if (navLinks.users) {
+        navLinks.users.addEventListener('click', (e) => {
+            e.preventDefault();
+            showUsers();
         });
     }
 
@@ -262,6 +275,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const prioritySelect = document.getElementById('det-change-priority');
         if (prioritySelect) prioritySelect.value = ticket.priority;
 
+        const claimBtn = document.getElementById('det-btn-claim');
+        if (claimBtn) {
+            const isTechOrAdmin = ['admin', 'technician'].includes(window.APP_CONFIG.userRole);
+            const isAssignedToMe = ticket.assigned_to == window.APP_CONFIG.userId;
+            if (isTechOrAdmin && !isAssignedToMe) {
+                claimBtn.classList.remove('hidden');
+            } else {
+                claimBtn.classList.add('hidden');
+            }
+        }
+
         renderComments(ticket.comments);
         renderFiles(ticket.files);
     }
@@ -384,6 +408,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Claim Ticket
+        const claimBtn = document.getElementById('det-btn-claim');
+        if (claimBtn) {
+            claimBtn.addEventListener('click', async () => {
+                const res = await apiCall('update_ticket', 'POST', {
+                    ticket_id: state.currentTicket.id,
+                    assigned_to: window.APP_CONFIG.userId
+                });
+                if (res.success) {
+                    const updatedTicket = await apiCall(`get_ticket&id=${state.currentTicket.id}`);
+                    state.currentTicket = updatedTicket;
+                    renderTicket(updatedTicket);
+                } else {
+                    alert('Error: ' + (res.error || 'Failed to claim ticket'));
+                }
+            });
+        }
+
         // Upload
         const uploadForm = document.getElementById('det-upload-form');
         if (uploadForm) {
@@ -471,6 +513,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function showUsers() {
+        showSection('users');
+        const tableBody = document.getElementById('users-table-body');
+        if (!tableBody) return;
+        tableBody.innerHTML = '<tr><td colspan="6">Loading users...</td></tr>';
+
+        try {
+            const users = await apiCall('get_users');
+            if (users.error) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="error">${users.error}</td></tr>`;
+                return;
+            }
+            tableBody.innerHTML = '';
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${u.id}</td>
+                    <td>${escapeHtml(u.name)}</td>
+                    <td>${escapeHtml(u.username)}</td>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td><span class="badge badge-secondary">${u.role}</span></td>
+                    <td>
+                        <select class="change-user-role" data-user-id="${u.id}">
+                            <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
+                            <option value="technician" ${u.role === 'technician' ? 'selected' : ''}>Technician</option>
+                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        </select>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // Role change listener
+            document.querySelectorAll('.change-user-role').forEach(select => {
+                select.addEventListener('change', async (e) => {
+                    const userId = e.target.dataset.userId;
+                    const newRole = e.target.value;
+                    const res = await apiCall('update_user_role', 'POST', {
+                        user_id: userId,
+                        role: newRole
+                    });
+                    if (res.success) {
+                        showUsers();
+                    } else {
+                        alert('Error: ' + (res.error || 'Failed to update role'));
+                    }
+                });
+            });
+        } catch (err) {
+            console.error(err);
+            tableBody.innerHTML = '<tr><td colspan="6" class="error">Failed to load users.</td></tr>';
+        }
+    }
+
     async function showStats() {
         showSection('stats');
         try {
@@ -481,6 +577,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             document.getElementById('stats-total').textContent = stats.total;
+            
+            const statusLabels = Object.keys(stats.status);
+            const statusData = Object.values(stats.status);
+            
+            const priorityLabels = Object.keys(stats.priority);
+            const priorityData = Object.values(stats.priority);
+
+            // Destroy existing charts if they exist
+            if (state.charts.status) state.charts.status.destroy();
+            if (state.charts.priority) state.charts.priority.destroy();
+
+            // Status Chart
+            const ctxStatus = document.getElementById('chart-status').getContext('2d');
+            state.charts.status = new Chart(ctxStatus, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ['#007bff', '#ffc107', '#28a745', '#6c757d']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Priority Chart
+            const ctxPriority = document.getElementById('chart-priority').getContext('2d');
+            state.charts.priority = new Chart(ctxPriority, {
+                type: 'pie',
+                data: {
+                    labels: priorityLabels,
+                    datasets: [{
+                        data: priorityData,
+                        backgroundColor: ['#17a2b8', '#007bff', '#ffc107', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
             
             const statusList = document.getElementById('stats-status-list');
             statusList.innerHTML = '';

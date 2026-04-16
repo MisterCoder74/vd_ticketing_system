@@ -483,3 +483,22 @@ footer {
         overflow-x: auto;
     }
 }
+
+/* User Management Table */
+#users-table-body select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-size: 0.9rem;
+}
+
+/* Chart Container */
+.chart-container {
+    margin-bottom: 20px;
+}
+
+/* Claim Button */
+#det-btn-claim {
+    margin-bottom: 10px;
+}

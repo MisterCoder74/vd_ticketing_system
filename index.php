@@ -38,6 +38,7 @@ $user = $_SESSION['user'] ?? null;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo asset('css/style.css'); ?>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         window.APP_CONFIG = {
             userId: <?php echo $user ? $user['id'] : 'null'; ?>,
@@ -59,6 +60,7 @@ $user = $_SESSION['user'] ?? null;
                             <a href="#" id="nav-logs">Logs</a>
                         <?php endif; ?>
                         <?php if (hasRole('admin')): ?>
+                            <a href="#" id="nav-users">Users</a>
                             <a href="#" id="nav-stats">Stats</a>
                         <?php endif; ?>
                         <span>Welcome, <strong><?php echo htmlspecialchars($user['name']); ?></strong> (<?php echo htmlspecialchars($user['role']); ?>)</span>
@@ -237,6 +239,9 @@ $user = $_SESSION['user'] ?? null;
                                         <span id="det-assignee"></span>
                                     </div>
                                     <?php if (hasRole(['admin', 'technician'])): ?>
+                                    <div id="det-claim-section" class="info-row" style="padding-top: 0;">
+                                        <button id="det-btn-claim" class="btn btn-success hidden" style="width: 100%;">Claim Ticket</button>
+                                    </div>
                                     <div id="det-assign-section" class="info-row" style="padding-top: 0; gap: 5px;">
                                         <select id="det-assign-user" style="flex: 1; padding: 8px;">
                                             <option value="">Unassigned</option>
@@ -290,6 +295,31 @@ $user = $_SESSION['user'] ?? null;
                         </div>
                     </section>
 
+                    <!-- Admin Users Section -->
+                    <section id="admin-users" class="dynamic-section hidden">
+                        <div class="section-header">
+                            <h2>User Management</h2>
+                            <button class="btn btn-secondary btn-back-to-list">Back to List</button>
+                        </div>
+                        <div id="users-container" class="card">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Current Role</th>
+                                        <th>Change Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <tr><td colspan="6">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
                     <!-- Admin Stats Section -->
                     <section id="admin-stats" class="dynamic-section hidden">
                         <div class="section-header">
@@ -302,10 +332,16 @@ $user = $_SESSION['user'] ?? null;
                         <div class="stats-grid">
                             <div class="card stats-card">
                                 <h3>By Status</h3>
+                                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                    <canvas id="chart-status"></canvas>
+                                </div>
                                 <div id="stats-status-list"></div>
                             </div>
                             <div class="card stats-card">
                                 <h3>By Priority</h3>
+                                <div class="chart-container" style="position: relative; height:250px; width:100%">
+                                    <canvas id="chart-priority"></canvas>
+                                </div>
                                 <div id="stats-priority-list"></div>
                             </div>
                             <div class="card stats-card">
