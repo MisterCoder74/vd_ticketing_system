@@ -241,6 +241,40 @@
             <p>È possibile esportare l'intero database dei ticket in formato <strong>CSV</strong>. Questa funzione è utile per analisi esterne o per conservare un archivio storico delle richieste. Il file esportato include tutti i dettagli principali, inclusi i nomi degli utenti e dei tecnici assegnati.</p>
         </section>
 
+        <section id="gestione-utenti">
+            <h2>Gestione Utenti (Admin)</h2>
+            <div class="note">
+                <strong>Accesso riservato:</strong> Questa sezione è visibile solo agli Amministratori.
+            </div>
+            <p>Dalla sezione <strong>"Users"</strong>, gli amministratori possono visualizzare l'elenco completo di tutti gli utenti registrati nel sistema. Per ogni utente è possibile:</p>
+            <ul>
+                <li>Visualizzare Nome, Username ed Email.</li>
+                <li>Visualizzare il ruolo attuale (user, technician, admin).</li>
+                <li><strong>Cambiare il ruolo:</strong> Utilizzando il menu a tendina nella colonna "Change Role", è possibile promuovere o declassare istantaneamente un utente. Ogni cambio di ruolo viene registrato nei Log di attività.</li>
+            </ul>
+        </section>
+
+        <section id="statistiche-grafiche">
+            <h2>Statistiche Grafiche</h2>
+            <div class="note">
+                <strong>Accesso riservato:</strong> Questa sezione è visibile solo agli Amministratori.
+            </div>
+            <p>La sezione <strong>"Stats"</strong> ora include grafici a torta (Pie Charts) per una visualizzazione immediata della distribuzione dei ticket:</p>
+            <ul>
+                <li><strong>Distribuzione per Stato:</strong> Visualizza la percentuale di ticket aperti, in corso, risolti e chiusi.</li>
+                <li><strong>Distribuzione per Priorità:</strong> Mostra visivamente quanti ticket appartengono alle diverse categorie di urgenza.</li>
+            </ul>
+            <p>Questi grafici aiutano a identificare rapidamente i colli di bottiglia e il carico di lavoro del team tecnico.</p>
+        </section>
+
+        <section id="prendi-in-carico">
+            <h2>Pulsante 'Prendi in carico' (Claim Ticket)</h2>
+            <div class="note">
+                <strong>Accesso riservato:</strong> Questa funzione è disponibile solo per Tecnici e Amministratori.
+            </div>
+            <p>Nella vista dettagliata del ticket, è ora disponibile il pulsante <strong>"Claim Ticket"</strong>. Questo pulsante permette a un tecnico o a un amministratore di assegnarsi istantaneamente il ticket con un solo click, senza doverlo selezionare manualmente dal menu di assegnazione. Una volta cliccato, il ticket risulterà assegnato all'utente corrente e il pulsante scomparirà.</p>
+        </section>
+
         <div class="footer">
             <p>&copy; 2024 VD Ticketing System. Tutti i diritti riservati.</p>
             <a href="index.php" class="btn-back">Torna al Login</a>

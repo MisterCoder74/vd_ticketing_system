@@ -371,6 +371,45 @@ switch ($action) {
         exit;
         break;
 
+    case 'get_users':
+        if (!hasRole('admin')) jsonResponse(['error' => 'Forbidden'], 403);
+        $users = loadJson('users');
+        // Remove passwords
+        foreach ($users as &$u) unset($u['password']);
+        jsonResponse($users);
+        break;
+
+    case 'update_user_role':
+        if ($method !== 'POST') jsonResponse(['error' => 'Method not allowed'], 405);
+        if (!hasRole('admin')) jsonResponse(['error' => 'Forbidden'], 403);
+
+        $targetUserId = $_POST['user_id'] ?? 0;
+        $newRole = $_POST['role'] ?? '';
+
+        if (!in_array($newRole, ['user', 'technician', 'admin'])) {
+            jsonResponse(['error' => 'Invalid role'], 400);
+        }
+
+        $users = loadJson('users');
+        $found = false;
+        foreach ($users as &$u) {
+            if ($u['id'] == $targetUserId) {
+                $oldRole = $u['role'] ?? 'user';
+                $u['role'] = $newRole;
+                $found = true;
+                logActivity($_SESSION['user']['id'], 'update_user_role', "Cambiato ruolo utente {$u['username']} da {$oldRole} a {$newRole}");
+                break;
+            }
+        }
+
+        if ($found) {
+            saveJson('users', $users);
+            jsonResponse(['success' => true]);
+        } else {
+            jsonResponse(['error' => 'User not found'], 404);
+        }
+        break;
+
     default:
         jsonResponse(['error' => 'Invalid action'], 400);
         break;
