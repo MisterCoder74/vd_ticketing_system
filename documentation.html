@@ -137,6 +137,7 @@
         <section id="introduzione">
             <h2>Introduzione</h2>
             <p>Benvenuto nel manuale utente di VD Ticketing System. Questa guida è progettata per aiutarti a navigare nel sistema e utilizzare le funzionalità disponibili per gestire le tue richieste di assistenza in modo efficiente.</p>
+            <p>Il sistema gestisce diversi ruoli utente (Utente, Tecnico, Amministratore). I nomi visualizzati nel sistema includono il ruolo tra parentesi, ad esempio: <strong>Nome Utente (admin)</strong>.</p>
         </section>
 
         <section id="accesso">
@@ -147,6 +148,7 @@
                 <li>Inserisci il tuo <strong>Username</strong> e la tua <strong>Password</strong> nei campi corrispondenti.</li>
                 <li>Clicca sul pulsante <strong>Login</strong>.</li>
             </ul>
+            <p>Ogni account utente è ora associato a un <strong>indirizzo email</strong> e a un <strong>dipartimento</strong> di appartenenza, garantendo una migliore tracciabilità e comunicazione.</p>
             <p>Una volta effettuato l'accesso, verrai reindirizzato alla tua Dashboard personale.</p>
         </section>
 
@@ -160,6 +162,9 @@
                 <li><strong>Priorità:</strong> L'urgenza assegnata al ticket.</li>
                 <li><strong>Creato il:</strong> La data e l'ora in cui hai inviato la richiesta.</li>
             </ul>
+
+            <h3>Filtri di Stato</h3>
+            <p>Sopra la tabella dei ticket è disponibile un menu a tendina <strong>"All Statuses"</strong>. Puoi utilizzarlo per filtrare rapidamente i ticket in base al loro stato attuale (es. visualizzare solo i ticket "Open" o solo quelli "In Progress").</p>
         </section>
 
         <section id="creazione-ticket">
@@ -195,6 +200,14 @@
                 <li>Seleziona il file dal tuo computer.</li>
                 <li>Clicca su <strong>"Upload File"</strong>.</li>
             </ul>
+
+            <h3>Notifiche Automatiche</h3>
+            <p>Il sistema invia automaticamente notifiche email in formato HTML per tenerti aggiornato:</p>
+            <ul>
+                <li><strong>Nuovi Commenti:</strong> Riceverai un'email ogni volta che viene aggiunto un commento al ticket.</li>
+                <li><strong>Cambi di Stato:</strong> Sarai informato via email quando lo stato del tuo ticket viene aggiornato (es. da "Aperto" a "In Corso").</li>
+            </ul>
+            <p>Le email includono i dettagli principali del ticket e, nel caso di immagini allegate (JPG, PNG, GIF), mostrano un'anteprima direttamente nel corpo del messaggio.</p>
         </section>
 
         <section id="workflow">
@@ -206,6 +219,26 @@
                 <li><strong>Risolto (Resolved):</strong> Il tecnico ha completato l'intervento. Verifica se il problema è effettivamente risolto.</li>
                 <li><strong>Chiuso (Closed):</strong> Il ticket è stato archiviato definitivamente.</li>
             </ol>
+        </section>
+
+        <section id="log-attivita">
+            <h2>Registro Attività</h2>
+            <div class="note">
+                <strong>Accesso riservato:</strong> Questa sezione è visibile solo ai Tecnici e agli Amministratori.
+            </div>
+            <p>Il sistema mantiene un registro dettagliato (Log) di ogni azione compiuta sui ticket. Questo include la creazione, i cambi di stato, le assegnazioni e il caricamento di file. Ogni voce nel log riporta la data, l'autore dell'azione e i dettagli della modifica effettuata.</p>
+        </section>
+
+        <section id="amministrazione">
+            <h2>Statistiche ed Amministrazione</h2>
+            <div class="note">
+                <strong>Accesso riservato:</strong> Questa sezione è visibile solo agli Amministratori.
+            </div>
+            <h3>Statistiche (Stats)</h3>
+            <p>Gli amministratori hanno accesso a una dashboard di statistiche che mostra il numero totale di ticket e i conteggi suddivisi per stato (Aperto, In Corso, ecc.) e per priorità.</p>
+            
+            <h3>Esportazione Dati (Export CSV)</h3>
+            <p>È possibile esportare l'intero database dei ticket in formato <strong>CSV</strong>. Questa funzione è utile per analisi esterne o per conservare un archivio storico delle richieste. Il file esportato include tutti i dettagli principali, inclusi i nomi degli utenti e dei tecnici assegnati.</p>
         </section>
 
         <div class="footer">
