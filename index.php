@@ -52,7 +52,7 @@ $user = $_SESSION['user'] ?? null;
     <div class="container">
         <header>
             <div class="header-content">
-                <h1><a href="index.php">VD Ticketing System</a></h1>
+                <h1><a href="index.php">🎫 VD Ticketing System</a></h1>
                 <?php if (isLoggedIn()): ?>
                     <nav>
                         <a href="index.php?action=dashboard" id="nav-dashboard">Dashboard</a>
@@ -104,6 +104,7 @@ $user = $_SESSION['user'] ?? null;
                         <div class="section-header">
                             <h2>Dashboard</h2>
                             <div class="header-actions">
+                                <input type="text" id="search-tickets" class="search-input" placeholder="Search tickets...">
                                 <select id="filter-status" class="btn btn-secondary" style="background: white; color: black; border: 1px solid #ccc;">
                                     <option value="all">All Statuses</option>
                                     <option value="open">Open</option>
@@ -133,6 +134,9 @@ $user = $_SESSION['user'] ?? null;
                                     <tr><td colspan="8">Loading tickets...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div id="load-more-container" class="load-more-container hidden">
+                            <button id="btn-load-more" class="btn btn-secondary">Load More</button>
                         </div>
                     </section>
 
