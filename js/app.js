@@ -19,44 +19,146 @@ document.addEventListener('DOMContentLoaded', () => {
         stats: document.getElementById('admin-stats')
     };
 
-    // Navigation Links
-    const navLinks = {
-        dashboard: document.getElementById('nav-dashboard'),
-        logs: document.getElementById('nav-logs'),
-        users: document.getElementById('nav-users'),
-        stats: document.getElementById('nav-stats')
-    };
+    /**
+     * Routing Logic
+     */
+    async function router() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action') || 'dashboard';
+        const id = urlParams.get('id');
 
-    if (navLinks.dashboard) {
-        navLinks.dashboard.addEventListener('click', (e) => {
-            e.preventDefault();
-            showDashboard();
-            window.history.pushState({}, '', 'index.php');
+        switch (action) {
+            case 'dashboard':
+                await showDashboard();
+                break;
+            case 'view_ticket':
+                if (id) {
+                    await showTicketDetails(id);
+                } else {
+                    navigateTo('index.php?action=dashboard');
+                }
+                break;
+            case 'create_ticket':
+                showSection('create');
+                break;
+            case 'logs':
+                if (['admin', 'technician'].includes(window.APP_CONFIG.userRole)) {
+                    await showLogs();
+                } else {
+                    navigateTo('index.php?action=dashboard');
+                }
+                break;
+            case 'users':
+                if (window.APP_CONFIG.userRole === 'admin') {
+                    await showUsers();
+                } else {
+                    navigateTo('index.php?action=dashboard');
+                }
+                break;
+            case 'stats':
+                if (window.APP_CONFIG.userRole === 'admin') {
+                    await showStats();
+                } else {
+                    navigateTo('index.php?action=dashboard');
+                }
+                break;
+            default:
+                await showDashboard();
+        }
+    }
+
+    function navigateTo(url) {
+        window.history.pushState({}, '', url);
+        router();
+    }
+
+    window.addEventListener('popstate', router);
+
+    /**
+     * Event Delegation
+     */
+    const appViewport = document.getElementById('app-viewport');
+    if (appViewport) {
+        appViewport.addEventListener('click', async (e) => {
+            // View Ticket
+            const viewBtn = e.target.closest('.btn-view-ticket');
+            if (viewBtn) {
+                e.preventDefault();
+                const id = viewBtn.dataset.id;
+                navigateTo(`index.php?action=view_ticket&id=${id}`);
+                return;
+            }
+
+            // Delete Ticket
+            const deleteBtn = e.target.closest('.btn-delete-ticket');
+            if (deleteBtn) {
+                e.preventDefault();
+                const id = deleteBtn.dataset.id;
+                if (confirm(`Are you sure you want to delete ticket #${id}?`)) {
+                    const res = await apiCall('delete_ticket', 'POST', { ticket_id: id });
+                    if (res.success) {
+                        router();
+                    } else {
+                        alert('Error: ' + (res.error || 'Failed to delete ticket'));
+                    }
+                }
+                return;
+            }
+
+            // Back to list
+            if (e.target.closest('.btn-back-to-list')) {
+                e.preventDefault();
+                navigateTo('index.php?action=dashboard');
+                return;
+            }
+
+            // Open Create
+            if (e.target.closest('#btn-open-create')) {
+                e.preventDefault();
+                navigateTo('index.php?action=create_ticket');
+                return;
+            }
+        });
+
+        // Delegate User Role changes
+        appViewport.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('change-user-role')) {
+                const userId = e.target.dataset.userId;
+                const newRole = e.target.value;
+                const res = await apiCall('update_user_role', 'POST', {
+                    user_id: userId,
+                    role: newRole
+                });
+                if (res.success) {
+                    showUsers();
+                } else {
+                    alert('Error: ' + (res.error || 'Failed to update role'));
+                }
+            }
         });
     }
 
-    if (navLinks.logs) {
-        navLinks.logs.addEventListener('click', (e) => {
+    // Top Navigation Links
+    document.querySelectorAll('nav a').forEach(link => {
+        if (link.id && link.id.startsWith('nav-')) {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const action = link.id.replace('nav-', '');
+                navigateTo(`index.php?action=${action}`);
+            });
+        }
+    });
+
+    // Logo link
+    const logoLink = document.querySelector('header h1 a');
+    if (logoLink) {
+        logoLink.addEventListener('click', (e) => {
             e.preventDefault();
-            showLogs();
+            navigateTo('index.php?action=dashboard');
         });
     }
 
-    if (navLinks.users) {
-        navLinks.users.addEventListener('click', (e) => {
-            e.preventDefault();
-            showUsers();
-        });
-    }
-
-    if (navLinks.stats) {
-        navLinks.stats.addEventListener('click', (e) => {
-            e.preventDefault();
-            showStats();
-        });
-    }
-
-    // Filter Status
+    // Dashboard Filters
     const filterStatus = document.getElementById('filter-status');
     if (filterStatus) {
         filterStatus.addEventListener('change', () => {
@@ -64,45 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CSV Export
-    const btnExportCsv = document.getElementById('btn-export-csv');
-    if (btnExportCsv) {
-        btnExportCsv.addEventListener('click', () => {
-            window.location.href = 'api.php?action=export_csv';
-        });
-    }
-
-    const buttons = {
-        openCreate: document.getElementById('btn-open-create'),
-        backToList: document.querySelectorAll('.btn-back-to-list')
-    };
-
-    // Initial Routing
-    const initialAction = document.body.dataset.action;
-    const initialId = document.body.dataset.ticketId;
-
-    if (initialAction === 'view_ticket' && initialId) {
-        showTicketDetails(initialId);
-    } else {
-        showDashboard();
-    }
-
-    // Event Listeners
-    if (buttons.openCreate) {
-        buttons.openCreate.addEventListener('click', () => {
-            showSection('create');
-        });
-    }
-
-    buttons.backToList.forEach(btn => {
-        btn.addEventListener('click', () => {
-            showDashboard();
-            // Update URL without reload
-            window.history.pushState({}, '', 'index.php');
-        });
-    });
-
-    // Handle Create Ticket
+    // Create Form
     const createForm = document.getElementById('create-ticket-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -112,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await apiCall('create_ticket', 'POST', formData);
                 if (response.id) {
                     createForm.reset();
-                    showDashboard();
+                    navigateTo('index.php?action=dashboard');
                 } else {
                     alert('Error creating ticket: ' + (response.error || 'Unknown error'));
                 }
@@ -123,11 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Details View Listeners
-    setupDetailsListeners();
+    // Stats Export
+    const btnExportCsv = document.getElementById('btn-export-csv');
+    if (btnExportCsv) {
+        btnExportCsv.addEventListener('click', () => {
+            window.location.href = 'api.php?action=export_csv';
+        });
+    }
+
+    // Initial load
+    router();
 
     /**
-     * Navigation Helpers
+     * UI Helper Functions
      */
     function showSection(sectionName) {
         Object.values(sections).forEach(sec => {
@@ -153,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Apply filter
             const filterValue = document.getElementById('filter-status').value;
             if (filterValue !== 'all') {
                 tickets = tickets.filter(t => t.status === filterValue);
@@ -185,31 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tableBody.appendChild(tr);
             });
-
-            // Re-attach listeners for the new buttons
-            document.querySelectorAll('.btn-view-ticket').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const id = btn.dataset.id;
-                    showTicketDetails(id);
-                    window.history.pushState({}, '', `index.php?action=view_ticket&id=${id}`);
-                });
-            });
-
-            document.querySelectorAll('.btn-delete-ticket').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const id = e.target.dataset.id;
-                    if (confirm(`Are you sure you want to delete ticket #${id}?`)) {
-                        const res = await apiCall('delete_ticket', 'POST', { ticket_id: id });
-                        if (res.success) {
-                            showDashboard();
-                        } else {
-                            alert('Error: ' + (res.error || 'Failed to delete ticket'));
-                        }
-                    }
-                });
-            });
-
         } catch (err) {
             console.error(err);
             tableBody.innerHTML = '<tr><td colspan="8" class="error">Failed to load tickets.</td></tr>';
@@ -222,14 +268,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const ticket = await apiCall(`get_ticket&id=${id}`);
             if (ticket.error) {
                 alert(ticket.error);
-                showDashboard();
+                navigateTo('index.php?action=dashboard');
                 return;
             }
 
             state.currentTicket = ticket;
             renderTicket(ticket);
 
-            // Populate technicians if admin or tech
             if (['admin', 'technician'].includes(window.APP_CONFIG.userRole)) {
                 if (state.technicians.length === 0) {
                     state.technicians = await apiCall('get_technicians');
@@ -246,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
-
         } catch (err) {
             console.error(err);
             alert('Failed to load ticket details.');
@@ -329,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupDetailsListeners() {
-        // Comment Form
         const commentForm = document.getElementById('det-add-comment-form');
         if (commentForm) {
             commentForm.addEventListener('submit', async (e) => {
@@ -351,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Status Change
         const statusSelect = document.getElementById('det-change-status');
         if (statusSelect) {
             statusSelect.addEventListener('change', async () => {
@@ -370,7 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Priority Change
         const prioritySelect = document.getElementById('det-change-priority');
         if (prioritySelect) {
             prioritySelect.addEventListener('change', async () => {
@@ -389,7 +430,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Assignment
         const assignBtn = document.getElementById('det-btn-assign');
         if (assignBtn) {
             assignBtn.addEventListener('click', async () => {
@@ -408,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Claim Ticket
         const claimBtn = document.getElementById('det-btn-claim');
         if (claimBtn) {
             claimBtn.addEventListener('click', async () => {
@@ -426,7 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Upload
         const uploadForm = document.getElementById('det-upload-form');
         if (uploadForm) {
             uploadForm.addEventListener('submit', async (e) => {
@@ -449,39 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-    }
-
-    /**
-     * Centralized API Call helper
-     */
-    async function apiCall(action, method = 'GET', body = null) {
-        const url = `api.php?action=${action}`;
-        const options = {
-            method,
-            cache: 'no-store'
-        };
-
-        if (body) {
-            if (body instanceof FormData) {
-                options.body = body;
-            } else {
-                const params = new URLSearchParams();
-                for (const [key, value] of Object.entries(body)) {
-                    params.append(key, value);
-                }
-                options.body = params;
-            }
-        }
-
-        const response = await fetch(url, options);
-        return await response.json();
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
 
     async function showLogs() {
@@ -544,23 +549,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tableBody.appendChild(tr);
             });
-
-            // Role change listener
-            document.querySelectorAll('.change-user-role').forEach(select => {
-                select.addEventListener('change', async (e) => {
-                    const userId = e.target.dataset.userId;
-                    const newRole = e.target.value;
-                    const res = await apiCall('update_user_role', 'POST', {
-                        user_id: userId,
-                        role: newRole
-                    });
-                    if (res.success) {
-                        showUsers();
-                    } else {
-                        alert('Error: ' + (res.error || 'Failed to update role'));
-                    }
-                });
-            });
         } catch (err) {
             console.error(err);
             tableBody.innerHTML = '<tr><td colspan="6" class="error">Failed to load users.</td></tr>';
@@ -584,11 +572,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const priorityLabels = Object.keys(stats.priority);
             const priorityData = Object.values(stats.priority);
 
-            // Destroy existing charts if they exist
             if (state.charts.status) state.charts.status.destroy();
             if (state.charts.priority) state.charts.priority.destroy();
 
-            // Status Chart
             const ctxStatus = document.getElementById('chart-status').getContext('2d');
             state.charts.status = new Chart(ctxStatus, {
                 type: 'pie',
@@ -605,7 +591,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Priority Chart
             const ctxPriority = document.getElementById('chart-priority').getContext('2d');
             state.charts.priority = new Chart(ctxPriority, {
                 type: 'pie',
@@ -644,4 +629,36 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Failed to load statistics.');
         }
     }
+
+    async function apiCall(action, method = 'GET', body = null) {
+        const url = `api.php?action=${action}`;
+        const options = {
+            method,
+            cache: 'no-store'
+        };
+
+        if (body) {
+            if (body instanceof FormData) {
+                options.body = body;
+            } else {
+                const params = new URLSearchParams();
+                for (const [key, value] of Object.entries(body)) {
+                    params.append(key, value);
+                }
+                options.body = params;
+            }
+        }
+
+        const response = await fetch(url, options);
+        return await response.json();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    setupDetailsListeners();
 });

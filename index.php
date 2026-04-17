@@ -67,7 +67,7 @@ $user = $_SESSION['user'] ?? null;
                         <a href="index.php?action=logout" class="btn-logout">Logout</a>
                     </nav>
                 <?php endif; ?>
-
+            </div>
         </header>
 
         <main>
