@@ -6,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
         charts: {
             status: null,
             priority: null
-        }
+        },
+        searchTerm: '',
+        ticketsToShow: 10
     };
 
     // UI Elements
@@ -162,6 +164,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterStatus = document.getElementById('filter-status');
     if (filterStatus) {
         filterStatus.addEventListener('change', () => {
+            state.ticketsToShow = 10;
+            showDashboard();
+        });
+    }
+
+    const searchInput = document.getElementById('search-tickets');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            state.searchTerm = e.target.value.toLowerCase();
+            state.ticketsToShow = 10;
+            showDashboard();
+        });
+    }
+
+    const btnLoadMore = document.getElementById('btn-load-more');
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', () => {
+            state.ticketsToShow += 10;
             showDashboard();
         });
     }
@@ -214,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showDashboard() {
         showSection('dashboard');
         const tableBody = document.getElementById('ticket-table-body');
+        const loadMoreContainer = document.getElementById('load-more-container');
         if (!tableBody) return;
 
         tableBody.innerHTML = '<tr><td colspan="8">Loading tickets...</td></tr>';
@@ -225,18 +246,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Filter by Status
             const filterValue = document.getElementById('filter-status').value;
             if (filterValue !== 'all') {
                 tickets = tickets.filter(t => t.status === filterValue);
             }
 
-            if (tickets.length === 0) {
+            // Filter by Search Term
+            if (state.searchTerm) {
+                const term = state.searchTerm;
+                tickets = tickets.filter(t => 
+                    t.title.toLowerCase().includes(term) || 
+                    t.id.toString().includes(term) || 
+                    (t.description && t.description.toLowerCase().includes(term))
+                );
+            }
+
+            const totalFiltered = tickets.length;
+            
+            // Slice for Pagination/Lazy Loading
+            const ticketsToDisplay = tickets.slice(0, state.ticketsToShow);
+
+            if (ticketsToDisplay.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8">No tickets found.</td></tr>';
+                if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
                 return;
             }
 
             tableBody.innerHTML = '';
-            tickets.forEach(ticket => {
+            ticketsToDisplay.forEach(ticket => {
                 const tr = document.createElement('tr');
                 let actionsHtml = `<button class="btn btn-sm btn-secondary btn-view-ticket" data-id="${ticket.id}">View</button>`;
                 
@@ -256,6 +294,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tableBody.appendChild(tr);
             });
+
+            // Show/Hide Load More
+            if (loadMoreContainer) {
+                if (totalFiltered > state.ticketsToShow) {
+                    loadMoreContainer.classList.remove('hidden');
+                } else {
+                    loadMoreContainer.classList.add('hidden');
+                }
+            }
         } catch (err) {
             console.error(err);
             tableBody.innerHTML = '<tr><td colspan="8" class="error">Failed to load tickets.</td></tr>';
